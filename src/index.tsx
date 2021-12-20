@@ -133,6 +133,13 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
     setPanel(AvailablePanel.CustomizedRanges);
   };
 
+  const setCustomizedDateClickHandler = (period: CustomizedRanges): void => {
+    setStartDate(period.startDate);
+    setEndDate(period.endDate);
+    setPanel(AvailablePanel.Calendar);
+    dateChangedHandler(period.startDate, period.endDate);
+  };
+
   const selectYearClickHandler = (
     event: React.MouseEvent<HTMLButtonElement>
   ): void => {
@@ -155,12 +162,36 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
     setPanel(AvailablePanel.Calendar);
   };
 
+  const dateChangedHandler = (
+    startDate: DateStructure,
+    endDate: DateStructure
+  ): void => {
+    if (!props.onDatesSelected) {
+      return;
+    }
+
+    if (props.onDatesSelected) {
+      const firstDate = dayjs(
+        `${startDate.year}-${startDate.month + 1}-${startDate.day}`
+      );
+
+      const secondDate = dayjs(
+        `${endDate.year}-${endDate.month + 1}-${endDate.day}`
+      );
+      if (firstDate.isAfter(secondDate)) {
+        props.onDatesSelected(secondDate.toDate(), firstDate.toDate());
+      } else {
+        props.onDatesSelected(firstDate.toDate(), secondDate.toDate());
+      }
+    }
+  };
+
   const calendarDayClickHandler = (
-    event: React.MouseEvent<HTMLTableDataCellElement>
+    event: React.MouseEvent<HTMLTableCellElement>
   ): void => {
     const dateValue = {
       day: Number.parseInt(
-        (event.currentTarget as HTMLTableDataCellElement).dataset.dayValue,
+        (event.currentTarget as HTMLTableCellElement).dataset.dayValue,
         10
       ),
       month: month,
@@ -169,20 +200,7 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
 
     if (startDate !== null && endDate === null) {
       setEndDate(dateValue);
-      if (props.onDatesSelected) {
-        const firstDate = dayjs(
-          `${startDate.year}-${startDate.month + 1}-${startDate.day}`
-        );
-
-        const secondDate = dayjs(
-          `${dateValue.year}-${dateValue.month + 1}-${dateValue.day}`
-        );
-        if (firstDate.isAfter(secondDate)) {
-          props.onDatesSelected(secondDate.toDate(), firstDate.toDate());
-        } else {
-          props.onDatesSelected(firstDate.toDate(), secondDate.toDate());
-        }
-      }
+      dateChangedHandler(startDate, dateValue);
       return;
     }
 
@@ -191,11 +209,11 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
   };
 
   const mouseEnterCellHandler = (
-    event: React.MouseEvent<HTMLTableDataCellElement>
+    event: React.MouseEvent<HTMLTableCellElement>
   ): void => {
     const dateValue = {
       day: Number.parseInt(
-        (event.currentTarget as HTMLTableDataCellElement).dataset.dayValue,
+        (event.currentTarget as HTMLTableCellElement).dataset.dayValue,
         10
       ),
       month: month,
@@ -250,9 +268,9 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
       `${current.year}-${current.month + 1}-${current.day}`
     );
     if (firstDate.isBefore(secondDate)) {
-      return currentDate.isBetween(firstDate, secondDate);
+      return currentDate.isBetween(firstDate, secondDate, "day");
     }
-    return currentDate.isBetween(secondDate, firstDate);
+    return currentDate.isBetween(secondDate, firstDate, "day");
   };
 
   const isDateOnRange = (dayNumber: number): boolean => {
@@ -315,7 +333,12 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
     content = (
       <div className={`${baseClassname}__selectCustomizedPanel`}>
         {(props.customizedRanges || []).map((period, index) => (
-          <button data-period-index={index}>{period}</button>
+          <button
+            data-period-index={index}
+            onClick={() => setCustomizedDateClickHandler(period)}
+          >
+            {period.label}
+          </button>
         ))}
       </div>
     );
@@ -355,21 +378,22 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
                 >
                   {[...new Array(7)].map((_, dayIndex) => {
                     const dayNumber = columnIndex * 7 + dayIndex - firstDay + 1;
-                    const disabledDay =
-                      (columnIndex === 0 && dayIndex < firstDay) ||
-                      dayNumber > daysInMonth;
+
+                    const isValidDay =
+                      (columnIndex === 0 && dayIndex >= firstDay) ||
+                      (columnIndex > 0 && dayNumber <= daysInMonth);
 
                     return (
                       <td
                         key={dayIndex}
                         data-day-value={dayNumber}
                         onClick={
-                          !disabledDay ? calendarDayClickHandler : undefined
+                          isValidDay ? calendarDayClickHandler : undefined
                         }
                         onMouseEnter={
-                          !disabledDay ? mouseEnterCellHandler : undefined
+                          isValidDay ? mouseEnterCellHandler : undefined
                         }
-                        data-disabled={disabledDay}
+                        data-disabled={!isValidDay}
                         className={[
                           `${baseClassname}__dayCell`,
                           [0, 6].includes(dayIndex)
@@ -382,12 +406,12 @@ const ReactRangeDates: React.FC<ReactRangeDatesProps> = ({
                                   dayNumber
                                 )}`,
                               ].join(" ")
-                            : isDateOnRange(dayNumber)
+                            : isDateOnRange(dayNumber) && isValidDay
                             ? `${baseClassname}__cellRange`
                             : "",
                         ].join(" ")}
                       >
-                        {disabledDay ? "" : <span>{dayNumber}</span>}
+                        {isValidDay ? <span>{dayNumber}</span> : ""}
                       </td>
                     );
                   })}

@@ -15,25 +15,31 @@ const Template: Story = (args) => (
 );
 
 export const Primary = Template.bind({});
+
+const today = new Date();
+
 Primary.args = {
   controlNext: ">",
   controlPrev: "<",
   open: true,
+  onDatesSelected: (startDate: Date, endDate: Date) => {
+    alert(
+      "start: " + startDate.toISOString() + " end: " + endDate.toISOString()
+    );
+  },
+  customizedRanges: [
+    {
+      label: "Last 7 days",
+      startDate: {
+        year: today.getFullYear(),
+        month: today.getMonth(),
+        day: today.getDate() - 7,
+      },
+      endDate: {
+        year: today.getFullYear(),
+        month: today.getMonth(),
+        day: today.getDate() - 1,
+      },
+    },
+  ],
 };
-
-// export const Secondary = Template.bind({});
-// Secondary.args = {
-//   label: "Button",
-// };
-
-// export const Large = Template.bind({});
-// Large.args = {
-//   size: "large",
-//   label: "Button",
-// };
-
-// export const Small = Template.bind({});
-// Small.args = {
-//   size: "small",
-//   label: "Button",
-// };
